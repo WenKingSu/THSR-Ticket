@@ -1,22 +1,22 @@
 import io
 import json
-from PIL import Image
-from typing import Tuple
 from datetime import date, timedelta
+from typing import Tuple
 
+from PIL import Image
 from bs4 import BeautifulSoup
 from requests.models import Response
 
-from thsr_ticket.model.db import Record
-from thsr_ticket.remote.http_request import HTTPRequest
-from thsr_ticket.configs.web.param_schema import BookingModel
-from thsr_ticket.configs.web.parse_html_element import BOOKING_PAGE
-from thsr_ticket.configs.web.enums import StationMapping, TicketType
 from thsr_ticket.configs.common import (
     AVAILABLE_TIME_TABLE,
     DAYS_BEFORE_BOOKING_AVAILABLE,
     MAX_TICKET_NUM,
 )
+from thsr_ticket.configs.web.enums import StationMapping, TicketType
+from thsr_ticket.configs.web.param_schema import BookingModel
+from thsr_ticket.configs.web.parse_html_element import BOOKING_PAGE
+from thsr_ticket.model.db import Record
+from thsr_ticket.remote.http_request import HTTPRequest
 
 
 class FirstPageFlow:
@@ -32,11 +32,12 @@ class FirstPageFlow:
         page = BeautifulSoup(book_page, features='html.parser')
 
         book_model = BookingModel(
-            start_station=self.select_station('啟程'),
-            dest_station=self.select_station('到達', default_value=StationMapping.Zuouing.value),
+            start_station=self.select_station('啟程', default_value=StationMapping.Hsinchu.value),
+            dest_station=self.select_station('到達', default_value=StationMapping.Tainan.value),
             outbound_date=self.select_date('出發'),
-            outbound_time=self.select_time('啟程'),
+            outbound_time=self.select_time('啟程', default_value=20),
             adult_ticket_num=self.select_ticket_num(TicketType.ADULT),
+            child_ticket_num=self.select_ticket_num(TicketType.CHILD),
             seat_prefer=_parse_seat_prefer_value(page),
             types_of_trip=_parse_types_of_trip_value(page),
             search_by=_parse_search_by(page),
@@ -47,15 +48,15 @@ class FirstPageFlow:
         resp = self.client.submit_booking_form(dict_params)
         return resp, book_model
 
-    def select_station(self, travel_type: str, default_value: int = StationMapping.Taipei.value) -> int:
+    def select_station(self, travel_type: str, default_value: int = StationMapping.Hsinchu.value) -> int:
         if (
-            self.record
-            and (
+                self.record
+                and (
                 station := {
                     '啟程': self.record.start_station,
                     '到達': self.record.dest_station,
                 }.get(travel_type)
-            )
+        )
         ):
             return station
 
@@ -72,14 +73,16 @@ class FirstPageFlow:
         today = date.today()
         last_avail_date = today + timedelta(days=DAYS_BEFORE_BOOKING_AVAILABLE)
         print(f'選擇{date_type}日期（{today}~{last_avail_date}）（預設為今日）：')
-        return input() or str(today)
+        return '2025-01-20' or str(today)
+        # return '2025-01-25' or str(today)
+        # return input() or str(today)
 
     def select_time(self, time_type: str, default_value: int = 10) -> str:
         if self.record and (
-            time_str := {
-                '啟程': self.record.outbound_time,
-                '回程': None,
-            }.get(time_type)
+                time_str := {
+                    '啟程': self.record.outbound_time,
+                    '回程': None,
+                }.get(time_type)
         ):
             return time_str
 
@@ -91,20 +94,20 @@ class FirstPageFlow:
             elif t_int != 1230 and t_str[-1] == "P":
                 t_int += 1200
             t_str = str(t_int)
-            print(f'{idx+1}. {t_str[:-2]}:{t_str[-2:]}')
+            print(f'{idx + 1}. {t_str[:-2]}:{t_str[-2:]}')
 
         selected_opt = int(input(f'輸入選擇（預設：{default_value}）：') or default_value)
-        return AVAILABLE_TIME_TABLE[selected_opt-1]
+        return AVAILABLE_TIME_TABLE[selected_opt - 1]
 
     def select_ticket_num(self, ticket_type: TicketType, default_ticket_num: int = 1) -> str:
         if self.record and (
-            ticket_num_str := {
-                TicketType.ADULT: self.record.adult_num,
-                TicketType.CHILD: None,
-                TicketType.DISABLED: None,
-                TicketType.ELDER: None,
-                TicketType.COLLEGE: None,
-            }.get(ticket_type)
+                ticket_num_str := {
+                    TicketType.ADULT: self.record.adult_num,
+                    TicketType.CHILD: None,
+                    TicketType.DISABLED: None,
+                    TicketType.ELDER: None,
+                    TicketType.COLLEGE: None,
+                }.get(ticket_type)
         ):
             return ticket_num_str
 
