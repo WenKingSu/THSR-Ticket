@@ -32,8 +32,8 @@ class FirstPageFlow:
         page = BeautifulSoup(book_page, features='html.parser')
 
         book_model = BookingModel(
-            start_station=self.select_station('啟程', default_value=StationMapping.Hsinchu.value),
-            dest_station=self.select_station('到達', default_value=StationMapping.Tainan.value),
+            start_station=self.select_station('啟程', default_value=StationMapping.Tainan.value),
+            dest_station=self.select_station('到達', default_value=StationMapping.Hsinchu.value),
             outbound_date=self.select_date('出發'),
             outbound_time=self.select_time('啟程', default_value=20),
             adult_ticket_num=self.select_ticket_num(TicketType.ADULT),
@@ -48,7 +48,7 @@ class FirstPageFlow:
         resp = self.client.submit_booking_form(dict_params)
         return resp, book_model
 
-    def select_station(self, travel_type: str, default_value: int = StationMapping.Hsinchu.value) -> int:
+    def select_station(self, travel_type: str, default_value: int = StationMapping.Tainan.value) -> int:
         if (
                 self.record
                 and (
@@ -73,7 +73,7 @@ class FirstPageFlow:
         today = date.today()
         last_avail_date = today + timedelta(days=DAYS_BEFORE_BOOKING_AVAILABLE)
         print(f'選擇{date_type}日期（{today}~{last_avail_date}）（預設為今日）：')
-        return '2025-01-20' or str(today)
+        return '2025-08-10' or str(today)
         # return '2025-01-25' or str(today)
         # return input() or str(today)
 
@@ -103,7 +103,7 @@ class FirstPageFlow:
         if self.record and (
                 ticket_num_str := {
                     TicketType.ADULT: self.record.adult_num,
-                    TicketType.CHILD: None,
+                    TicketType.CHILD: self.record.child_ticket_num,
                     TicketType.DISABLED: None,
                     TicketType.ELDER: None,
                     TicketType.COLLEGE: None,

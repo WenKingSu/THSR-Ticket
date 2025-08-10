@@ -15,6 +15,7 @@ class Record(NamedTuple):
     dest_station: int = None
     outbound_time: str = None
     adult_num: str = None
+    child_ticket_num: str = None
 
 
 class ParamDB:
@@ -43,7 +44,7 @@ class ParamDB:
     def get_history(self) -> List[Record]:
         with TinyDB(self.db_path) as db:
             dicts = db.all()
-        return [Record(**d) for d in dicts]   # type: ignore
+        return [Record(**d) for d in dicts]  # type: ignore
 
     def _compare_hist(self, data: Mapping[str, Any], hist: Iterable[Document]) -> int:
         for idx, h in enumerate(hist):
